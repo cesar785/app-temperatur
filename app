@@ -2,23 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-void main() {
-  runApp(PrevisaoApp());
-}
-
-class PrevisaoApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Previsão do Tempo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: PrevisaoPage(),
-    );
-  }
-}
-
+// Modelo para a previsão do tempo
 class Previsao {
   final String data;
   final double temperatura;
@@ -51,6 +35,21 @@ class Previsao {
   }
 }
 
+void main() {
+  runApp(PrevisaoApp());
+}
+
+class PrevisaoApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Previsão do Tempo',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: PrevisaoPage(),
+    );
+  }
+}
+
 class PrevisaoPage extends StatefulWidget {
   @override
   _PrevisaoPageState createState() => _PrevisaoPageState();
@@ -62,16 +61,17 @@ class _PrevisaoPageState extends State<PrevisaoPage> {
   @override
   void initState() {
     super.initState();
-    previsoes = fetchPrevisao();
+    previsoes = fetchPrevisoes();
   }
 
-  Future<List<Previsao>> fetchPrevisao() async {
-    final response = await http.get(Uri.parse('https://demo3520525.mockable.io/previsao'));
+  // Função para buscar as previsões do endpoint
+  Future<List<Previsao>> fetchPrevisoes() async {
+    final url = Uri.parse('https://demo3520525.mockable.io/previsao');
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      return (jsonDecode(response.body) as List)
-          .map((data) => Previsao.fromJson(data))
-          .toList();
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => Previsao.fromJson(item)).toList();
     } else {
       throw Exception('Falha ao carregar a previsão do tempo');
     }
@@ -89,28 +89,35 @@ class _PrevisaoPageState extends State<PrevisaoPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Erro: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            return ListView(
-              padding: EdgeInsets.all(10),
-              children: snapshot.data!.map((previsao) {
+            return Center(
+              child: Text('Erro ao carregar dados: ${snapshot.error}'),
+            );
+          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                final previsao = snapshot.data![index];
                 return Card(
-                  margin: EdgeInsets.symmetric(vertical: 5),
+                  margin: EdgeInsets.all(10),
                   child: ListTile(
                     title: Text('Data: ${previsao.data}'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Temperatura: ${previsao.temperatura}°${previsao.unidade}'),
-                        Text('Umidade: ${previsao.umidade}%'),
-                        Text('Luminosidade: ${previsao.luminosidade} lux'),
-                        Text('Vento: ${previsao.vento} m/s'),
-                        Text('Chuva: ${previsao.chuva} mm'),
-                      ],
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                              'Temperatura: ${previsao.temperatura}°${previsao.unidade}'),
+                          Text('Umidade: ${previsao.umidade}%'),
+                          Text('Luminosidade: ${previsao.luminosidade} lux'),
+                          Text('Vento: ${previsao.vento} m/s'),
+                          Text('Chuva: ${previsao.chuva} mm'),
+                        ],
+                      ),
                     ),
                   ),
                 );
-              }).toList(),
+              },
             );
           } else {
             return Center(child: Text('Nenhuma previsão disponível.'));
@@ -120,4 +127,3 @@ class _PrevisaoPageState extends State<PrevisaoPage> {
     );
   }
 }
-
